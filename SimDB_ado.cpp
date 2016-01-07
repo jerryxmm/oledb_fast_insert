@@ -1880,12 +1880,46 @@ HRESULT CSimDB_ADO::fastInsertRow(void *pData)
 	return hr;
 }
 
-HRESULT CSimDB_ADO::initFastInsert(wstring ip, wstring user, wstring password, wstring tableName)
+HRESULT SetFastLoadProperty(IDBInitialize * pIDBInitialize) {
+	HRESULT hr = S_OK;
+	IDBProperties * pIDBProps = NULL;
+	DBPROP rgProps[1];
+	DBPROPSET PropSet;
+
+	VariantInit(&rgProps[0].vValue);
+
+	rgProps[0].dwOptions = DBPROPOPTIONS_OPTIONAL;
+	rgProps[0].colid = DB_NULLID;
+	rgProps[0].vValue.vt = VT_BOOL;
+	rgProps[0].dwPropertyID = SSPROP_ENABLEFASTLOAD;
+
+	rgProps[0].vValue.boolVal = VARIANT_TRUE;
+
+	PropSet.rgProperties = rgProps;
+	PropSet.cProperties = 1;
+	PropSet.guidPropertySet = DBPROPSET_SQLSERVERDATASOURCE;
+
+	if (SUCCEEDED(hr = pIDBInitialize->QueryInterface(IID_IDBProperties, (LPVOID *)&pIDBProps))) {
+		hr = pIDBProps->SetProperties(1, &PropSet);
+	}
+
+	VariantClear(&rgProps[0].vValue);
+
+	if (pIDBProps)
+		pIDBProps->Release();
+
+	return hr;
+}
+
+HRESULT CSimDB_ADO::initFastInsert(wstring ip, wstring user, wstring password, wstring db, wstring tableName)
 {
 	HRESULT hr = NOERROR;
 	CoInitialize(NULL);
-
-	m_pIDataInitialize = NULL; //SQLNCLI_CLSID
+	LPWSTR pwszProgID = L"SQLOLEDB";
+	CLSID clsidProv;
+	hr = CLSIDFromProgID(pwszProgID, &clsidProv);
+	
+	m_pIDataInitialize = NULL; //SQLNCLI_CLSID  CLSID_SQLOLEDB CLSID_MSDAINITIALIZE CLSID_DataLinks CLSID_MSDASQL CLSID_SQLNCLI10
 	if (!SUCCEEDED(hr = CoCreateInstance(CLSID_MSDAINITIALIZE, NULL, CLSCTX_INPROC_SERVER, IID_IDataInitialize, (void **)&m_pIDataInitialize)))
 	{
 		return hr;
@@ -1901,6 +1935,11 @@ HRESULT CSimDB_ADO::initFastInsert(wstring ip, wstring user, wstring password, w
 	}
 
 	hr = m_pIDBInitialize->Initialize();
+	if (FAILED(hr))
+	{
+		return hr;
+	}
+	hr = SetFastLoadProperty(m_pIDBInitialize);
 	if (FAILED(hr))
 	{
 		return hr;
@@ -1923,21 +1962,7 @@ HRESULT CSimDB_ADO::initFastInsert(wstring ip, wstring user, wstring password, w
 	TableID.eKind = DBKIND_NAME;
 	LPOLESTR x = TableID.uName.pwszName = SysAllocStringLen(tableName.c_str(), tableName.size());
 
-	DBPROP rgProps[1];
-	DBPROPSET PropSet;
-
-	VariantInit(&rgProps[0].vValue);
-
-	rgProps[0].dwOptions = DBPROPOPTIONS_OPTIONAL;
-	rgProps[0].colid = DB_NULLID;
-	rgProps[0].vValue.vt = VT_BOOL;
-	rgProps[0].dwPropertyID = SSPROP_ENABLEFASTLOAD;
-	rgProps[0].vValue.boolVal = VARIANT_TRUE;
-
-	PropSet.rgProperties = rgProps;
-	PropSet.cProperties = 1;
-	PropSet.guidPropertySet = DBPROPSET_SQLSERVERROWSET;
-	if (FAILED(hr = pIOpenRowsetFL->OpenRowset(NULL, &TableID, NULL, IID_IRowsetFastLoad, 1, &PropSet, (LPUNKNOWN *)&m_pIFastLoad)))
+	if (FAILED(hr = pIOpenRowsetFL->OpenRowset(NULL, &TableID, NULL, IID_IRowsetFastLoad, 0, NULL, (IUnknown **)&m_pIFastLoad)))
 	{
 		return hr;
 	}

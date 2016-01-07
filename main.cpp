@@ -83,7 +83,7 @@ int main()
 {
  	CSimDB_ADO db;
 	HRESULT hr;
-	hr = db.initFastInsert(L"192.168.133.139", L"sa", L"abc**123", L"[test].[dbo].[tid]");
+	hr = db.initFastInsert(L"192.168.133.139", L"sa", L"abc**123",L"test", L"[test].[dbo].[tid]");
 	if (FAILED(hr))
 	{
 		cout << "initFastInsert failed, " << hr << endl;

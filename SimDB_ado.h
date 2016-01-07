@@ -104,7 +104,7 @@ public:
 
 	bool SelectInto(CStdRecord *pRecord, bool bCreateHead = true);
 
-	HRESULT initFastInsert(wstring ip, wstring user, wstring password, wstring tableName);
+	HRESULT initFastInsert(wstring ip, wstring user, wstring password, wstring db, wstring tableName);
 	HRESULT fastInsertRow(void *pData);
 	HRESULT fastInsertCommit();
 	void finitFastInsert();
