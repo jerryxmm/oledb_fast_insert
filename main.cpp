@@ -75,33 +75,52 @@ void test_max_sqlsize(CSimDB_ADO& db)
 	//db.Commit();
 	printf("exec: %d, err=%d, %s \n", rs, db.GetCode(), db.GetLastErrMsg().c_str());
 }
-
+struct DataRow
+{
+	int id;
+};
 int main()
 {
-	CoInitialize(NULL);
-
-	CSimDB_ADO db;
-	if (db.Open("192.168.133.136", "sa", "abc**123", "test"))
+ 	CSimDB_ADO db;
+	HRESULT hr;
+	hr = db.initFastInsert(L"192.168.133.139", L"sa", L"abc**123", L"[test].[dbo].[tid]");
+	if (FAILED(hr))
 	{
-		printf("open database ok! \n");
-
-		test_insert(db);
-
-		//test_select(db);
-
-		//test_selectinfo(db);
-
-		//test_max_sqlsize(db);
-
-		db.Close();
-		printf("close database ok! \n");
+		cout << "initFastInsert failed, " << hr << endl;
+		system("pause");
+		return -1;
 	}
-	else
+	DataRow oneRow;
+	for (int i = 0; i < 10; i++)
 	{
-		printf("open database failed! \n");
-		printf("error: %d, %s \n", db.GetCode(), db.GetLastErrMsg().c_str());
+		oneRow.id = i;
+		db.fastInsertRow((void *)&oneRow);
 	}
+	db.fastInsertCommit();
+	db.finitFastInsert();
+	system("pause");
 	getchar();
-	CoUninitialize();
+// 	if (db.Open("192.168.133.136", "sa", "abc**123", "test"))
+// 	{
+// 		printf("open database ok! \n");
+// 
+// 		test_insert(db);
+// 
+// 		//test_select(db);
+// 
+// 		//test_selectinfo(db);
+// 
+// 		//test_max_sqlsize(db);
+// 
+// 		db.Close();
+// 		printf("close database ok! \n");
+// 	}
+// 	else
+// 	{
+// 		printf("open database failed! \n");
+// 		printf("error: %d, %s \n", db.GetCode(), db.GetLastErrMsg().c_str());
+// 	}
+// 	getchar();
+// 	CoUninitialize();
 	return 0;
 }

@@ -1874,7 +1874,9 @@ void set_bind(DBBINDING &binding, int col, DBBYTEOFFSET len_offset, DBBYTEOFFSET
 
 HRESULT CSimDB_ADO::fastInsertRow(void *pData)
 {
-	HRESULT hr = m_pIFastLoad->InsertRow(m_hAccessor, pData);
+	HRESULT hr;
+	if (m_pIFastLoad)
+		 hr = m_pIFastLoad->InsertRow(m_hAccessor, pData);
 	return hr;
 }
 
