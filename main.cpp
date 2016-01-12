@@ -3,124 +3,102 @@
 
 #include "SimDB_ado.h"
 
+#include <time.h>
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <comutil.h>
 //#include "msado15.tlh"
 
-void test_insert(CSimDB_ADO& db)
-{
-	printf("-----insert-------\n");
-	//db.BeginTrans();
-	printf("exec: err=%d, %s \n", db.GetCode(), db.GetLastErrMsg().c_str());
-	db.Cmd("insert into [user](id, name, info, cost)values(?, ?, ?, ?)");
-	db.Set("id", (long)13);
-	db.Set("name", "name7");
-	db.Set("info", "info4");
-	db.Set("cost", 6.9);
-	//db.SetNull("cost");
-	long rs = db.Exec();
-	printf("exec: %d, err=%d, %s \n", rs, db.GetCode(), db.GetLastErrMsg().c_str());
-}
+#define COUNT 10
 
-void test_select(CSimDB_ADO& db)
+struct MyData
 {
-	printf("-----select-------\n");
-
-	long id;
+	int rec_num;
+	char date[9];
+	char time[9];
+	char reff[11];
 	double cost;
-	string sname, sinfo;
-
-	db.Cmd("select * from [user];");
-	char buf[50] = { 0 };
-	long nlen = 0;
-	while (db.More())
-	{
-		id = db.GetLong(0);
-		sname = db.Get(1);
-		//sinfo = db.Get("info");
-		memset(buf, 0, 50);
-		db.GetBuffer("info", (BYTE *)buf, nlen);
-		sinfo = string(buf, nlen);
-		cost = db.GetDouble("cost");
-		printf("id=%d, name=%s, info=%s, cost=%f \n", id, sname.c_str(), sinfo.c_str(), cost);
-	}
-
-	printf("exec: err=%d, %s \n", db.GetCode(), db.GetLastErrMsg().c_str());
-}
-
-void test_selectinfo(CSimDB_ADO& db)
-{
-	printf("----- selectinfo save file -------\n");
-
-	db.Cmd("select * from [user];");
-	CStdRecord rec;
-	db.SelectInto(&rec, true);
-	bool rs = rec.SaveToFile("t:\\user.log");
-	printf(rs ? "save ok. \n" : "save failed. \n");
-}
-
-void test_max_sqlsize(CSimDB_ADO& db)
-{
-	long maxlen = 10 * 1024 * 1024 + 1;
-	char* buf = new char[maxlen];
-	FILE* f = fopen("t:/insert.sql", "r");
-	long len = fread(buf, 1, maxlen, f);
-	buf[len] = 0;
-	fclose(f);
-	db.SetSQLSize(len + 1);
-	db.Cmd(buf);
-	//db.BeginTrans();
-	long rs = db.Exec();
-	//db.Commit();
-	printf("exec: %d, err=%d, %s \n", rs, db.GetCode(), db.GetLastErrMsg().c_str());
-}
-struct DataRow
-{
-	int id;
+	char acc[11];
+	char stock[7];
+	char bs[2];
+	char price[9];
+	char qty[9];
+	char status[2];
+	char owflag[4];
+	char ordrec[9];
+	char firmid[6];
+	char branchid[6];
+	char checkord[16];
 };
 int main()
 {
  	CSimDB_ADO db;
 	HRESULT hr;
-	hr = db.initFastInsert(L"192.168.133.139", L"sa", L"abc**123",L"test", L"[test].[dbo].[tid]");
+	hr = db.initQuickInsert(L"192.168.133.151", L"sa", L"abc**123",L"test", L"order");
 	if (FAILED(hr))
 	{
 		cout << "initFastInsert failed, " << hr << endl;
 		system("pause");
 		return -1;
-	}
-	DataRow oneRow;
-	for (int i = 0; i < 10; i++)
+	} 
+	time_t begin;
+	time(&begin);
+
+	MyData oneRow[5];
+
+	for (int j = 0; j < 100000; j++)
 	{
-		oneRow.id = i;
-		db.fastInsertRow((void *)&oneRow);
+		for (int i = 0; i < 5; i++)
+		{
+			oneRow[i].rec_num = i;
+			strcpy_s(oneRow[i].date, "201601");
+			strcpy_s(oneRow[i].time, "20150121");
+			strcpy_s(oneRow[i].reff, "1234567890");
+			oneRow[i].cost = 1.003;
+			strcpy_s(oneRow[i].acc, "0000011111");
+			strcpy_s(oneRow[i].stock, "123456");
+			strcpy_s(oneRow[i].bs, "B");
+			strcpy_s(oneRow[i].price, "1.000");
+			strcpy_s(oneRow[i].qty, "1000");
+			strcpy_s(oneRow[i].status, "R");
+			strcpy_s(oneRow[i].owflag, "ORD");
+			strcpy_s(oneRow[i].ordrec, "1");
+			strcpy_s(oneRow[i].firmid, "123");
+			strcpy_s(oneRow[i].branchid, "20201");
+			strcpy_s(oneRow[i].checkord, "20201");
+			//memset(oneRow[i].checkord, 0, 16);
+			hr = db.quickInsert((void *)&oneRow[i]);
+			if (FAILED(hr))
+			{
+				cout << "initFastInsert failed, " << hr <<"   i = " << i<< endl;
+				break;
+			}
+		}
 	}
-	db.fastInsertCommit();
-	db.finitFastInsert();
+
+	if (SUCCEEDED(hr))
+	{
+		hr = db.quickInsertCommit();
+		if (FAILED(hr))
+		{
+			cout << "data insert commit failed!" << endl;
+		}
+		else
+		{
+			cout << "data insert commit success!" << endl;
+		}
+
+	}
+	else
+	{
+		cout << "data insert failed!" << endl;
+	}
+	db.finitQuickInsert();
+	time_t end;
+	time(&end);
+	printf("Elapse Time= [%lld]\n", end - begin);
+	
 	system("pause");
 	getchar();
-// 	if (db.Open("192.168.133.136", "sa", "abc**123", "test"))
-// 	{
-// 		printf("open database ok! \n");
-// 
-// 		test_insert(db);
-// 
-// 		//test_select(db);
-// 
-// 		//test_selectinfo(db);
-// 
-// 		//test_max_sqlsize(db);
-// 
-// 		db.Close();
-// 		printf("close database ok! \n");
-// 	}
-// 	else
-// 	{
-// 		printf("open database failed! \n");
-// 		printf("error: %d, %s \n", db.GetCode(), db.GetLastErrMsg().c_str());
-// 	}
-// 	getchar();
-// 	CoUninitialize();
 	return 0;
 }
